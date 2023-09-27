@@ -1,6 +1,6 @@
 from pytest import fixture, approx
 from random import seed
-from src.utils import rand_wrapper as rw
+from src.utils import rand_wrappers as rw
 
 
 @fixture
