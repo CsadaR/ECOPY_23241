@@ -13,7 +13,7 @@ def test_input():
     dist = wt.ParetoDistribution(rand_gen, scale, shape)
     result1 = dist.scale
     result2 = dist.shape
-    result3 = dist.rand
+    result3 = dist.random
 
     # Assert
     assert result1 == scale
@@ -89,7 +89,7 @@ def test_gen_rand():
 
     # Act
     dist = wt.ParetoDistribution(rand_gen, scale, shape)
-    dist.rand.seed(42)
+    dist.random.seed(42)
     result = [dist.gen_rand() for _ in range(104)]
 
     # Assert

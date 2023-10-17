@@ -67,8 +67,8 @@ class LaplaceDistribution:
 
 
 class ParetoDistribution:
-    def __init__(self, rand, scale, shape):
-        self.rand = rand
+    def __init__(self, random, scale, shape):
+        self.random = random
         self.scale = scale
         self.shape = shape
 
