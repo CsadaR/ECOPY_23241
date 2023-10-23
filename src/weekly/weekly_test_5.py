@@ -91,7 +91,7 @@ def gen_uniform_mean_trajectories(distribution, number_of_trajectories, length_o
             value = distribution.gen_rand()
             cumulative_mean += value
             trajectory.append(cumulative_mean / (len(trajectory) + 1))
-            result.append(trajectory)
+        result.append(trajectory)
     return result
 
 
