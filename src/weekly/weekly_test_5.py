@@ -1,15 +1,19 @@
 import pandas as pd
+import random
 from pathlib import Path
 file_to_load = Path.cwd().parent.joinpath('data').joinpath('chipotle.tsv')
 food = pd.read_csv("../../data/chipotle.tsv", sep='\t')
+
 
 def change_price_to_float(input_df):
     input_df['item_price'] = input_df['item_price'].str.replace('$', '').astype(float)
     return input_df
 
+
 def number_of_observations(input_df):
     new_df = input_df.copy()
     return len(new_df)
+
 
 def items_and_prices(input_df):
     new_df = input_df[['item_name', 'item_price']]
@@ -19,6 +23,7 @@ def items_and_prices(input_df):
 def sorted_by_price(item_price):
     new_df = item_price.sort_values(by='item_price', ascending=False)
     return new_df
+
 
 def avg_price(input_df):
     new_df = input_df.copy()
@@ -43,7 +48,7 @@ def first_three_columns(input_df):
 
 
 def every_column_except_last_two(input_df):
-    new_df =input_df.iloc[:, :-2]
+    new_df = input_df.iloc[:, :-2]
     return new_df
 
 
@@ -54,6 +59,7 @@ def sliced_view(input_df, columns_to_keep, column_to_filter, rows_to_keep):
 
 def generate_quartile(input_df):
     input_df = input_df.copy()
+
     def quartile(pre):
         if 30 < pre:
             return "premium"
@@ -75,19 +81,18 @@ def minmaxmean_price_in_quartile(input_df):
     return input_df.groupby('Quartile')['item_price'].agg(['min', 'max', 'mean'])
 
 
-import random
 def gen_uniform_mean_trajectories(distribution, number_of_trajectories, length_of_trajectory):
-        random.seed(42)
-        result = []
-        for _ in range(number_of_trajectories):
-            trajectory = []
-            cumulative_mean = 0.0
-            for _ in range(length_of_trajectory):
-                value = distribution.gen_rand()
-                cumulative_mean += value
-                trajectory.append(cumulative_mean / (len(trajectory) + 1))
+    random.seed(42)
+    result = []
+    for _ in range(number_of_trajectories):
+        trajectory = []
+        cumulative_mean = 0.0
+        for _ in range(length_of_trajectory):
+            value = distribution.gen_rand()
+            cumulative_mean += value
+            trajectory.append(cumulative_mean / (len(trajectory) + 1))
             result.append(trajectory)
-        return result
+    return result
 
 
 def gen_laplace_mean_trajectories(distribution, number_of_trajectories, length_of_trajectory):
@@ -117,6 +122,7 @@ def gen_cauchy_mean_trajectories(distribution, number_of_trajectories, length_of
         result.append(trajectory)
     return result
 
+
 def gen_logistic_mean_trajectories(distribution, number_of_trajectories, length_of_trajectory):
     random.seed(42)
     result = []
@@ -129,6 +135,7 @@ def gen_logistic_mean_trajectories(distribution, number_of_trajectories, length_
             trajectory.append(cumulative_mean / (len(trajectory) + 1))
         result.append(trajectory)
     return result
+
 
 def gen_chi2_mean_trajectories(distribution, number_of_trajectories, length_of_trajectory):
     random.seed(42)
