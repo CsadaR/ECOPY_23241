@@ -143,7 +143,7 @@ class TestWeekly5:
 
         # Act
         result = wt.generate_quartile(self.refdata)
-
+        print((result).head)
         # Assert
         assert_frame_equal(result.reset_index(drop=True), expected.reset_index(drop=True))
         assert_frame_equal(self.refdata, side_effect)

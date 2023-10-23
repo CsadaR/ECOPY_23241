@@ -1,3 +1,53 @@
+
+class UniformDistribution:
+    def __init__(self, rand, a, b):
+        self.rand = rand
+        self.a = a
+        self.b = b
+
+    def pdf(self, x):
+        if self.a <= x <= self.b:
+            return 1 / (self.b - self.a)
+        else:
+            return 0.0
+
+    def cdf(self, x):
+        if x < self.a:
+            return 0.0
+        elif x >= self.b:
+            return 1.0
+        else:
+            return (x - self.a) / (self.b - self.a)
+    def ppf(self, p):
+        if 0 <= p <= 1:
+            return self.a + p * (self.b - self.a)
+        else:
+            raise ValueError("x must be between 0 and 1")
+
+    def gen_rand(self):
+        return self.rand.uniform(self.a,self.b)
+    def mean(self):
+        return (self.a + self.b) / 2
+    def median(self):
+        return (self.a + self.b) / 2
+    def variance(self):
+        import math
+        if self.a == self.b:
+            raise Exceotion ("Moment undefined")
+        return (math.pow((self.b - self.a), 2)) / 12
+    def skewness(self):
+        import math
+        std_dev = math.sqrt(self.variance())
+        return 3*(self.mean()-self.median())/std_dev
+    def ex_kurtosis(self):
+        return -6 / 5
+    def mvsk(self):
+        mean = self.mean()
+        variance = self.variance()
+        skewness = self.skewness()
+        ex_kurtosis = self.ex_kurtosis()
+        return [mean, variance, skewness, ex_kurtosis]
+
 class CauchyDistribution:
     def __init__(self, rand, loc, scale):
         self.rand = rand  # Véletlenszám generátor
