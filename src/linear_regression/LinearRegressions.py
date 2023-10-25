@@ -28,4 +28,4 @@ class LinearRegressionSM:
         ars = self._model.rsquared_adj
         ak = self._model.aic
         by = self._model.bic
-        return f'Adjusted R-squared: {ars:.3f}, Akaike IC: {ak:.3}, Bayes IC: {by:.3}'
+        return f'Adjusted R-squared: {ars:.3}, Akaike IC: {ak:.3}, Bayes IC: {by:.3}'
