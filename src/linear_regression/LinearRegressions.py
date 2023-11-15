@@ -2,7 +2,7 @@ import statsmodels.api as sm
 import pandas as pd
 import numpy as np
 from scipy import stats
-
+from scipy.stats import t, f
 
 class LinearRegressionSM:
     def __init__(self, left_hand_side, right_hand_side):
@@ -79,3 +79,58 @@ class LinearRegressionNP:
         crs = SSR / SST
         ars = 1 - (1 - crs) * ((n - 1) / (n - K))
         return f"Centered R-squared: {crs:.3f}, Adjusted R-squared: {ars:.3f}"
+
+
+class LinearRegressionGLS:
+    def __init__(self, left_hand_side, right_hand_side):
+        self.left_hand_side = left_hand_side
+        self.right_hand_side = right_hand_side
+        self.right_hand_side = pd.concat([pd.Series(1, index=self.right_hand_side.index, name='Constant'),
+                                          self.right_hand_side], axis=1)
+        self.X = self.right_hand_side.to_numpy()
+        self.y = self.left_hand_side.to_numpy()
+        self.beta = None
+        self.beta_coefficients = None
+        self.residuals = None
+        self.cov_matrix = None
+
+    def fit(self):
+        ols_beta = np.linalg.inv(self.X.T @ self.X) @ self.X.T @ self.y
+        residuals = self.y - self.X @ ols_beta
+        squared_residuals = np.square(residuals)
+        new_lhs = np.log(squared_residuals)
+        new_X = self.right_hand_side.to_numpy()
+        predicted_values = np.exp(new_X @ ols_beta)
+        v_inverse = np.diag(1 / predicted_values)
+        self.cov_matrix = np.linalg.inv(new_X.T @ v_inverse @ new_X)
+        gls_X = np.linalg.inv(np.sqrt(v_inverse)) @ new_X
+        gls_y = np.linalg.inv(np.sqrt(v_inverse)) @ new_lhs
+        self.beta = np.linalg.inv(gls_X.T @ gls_X) @ gls_X.T @ gls_y
+        self.beta_coefficients = pd.Series(self.beta, index=self.right_hand_side.columns, name='Beta coefficients')
+        self.residuals = residuals
+
+    def get_params(self):
+        return pd.Series(self.beta_coefficients, name='Beta coefficients')
+
+    def get_pvalues(self):
+        dof = len(self.left_hand_side) - len(self.beta)
+        t_values = self.beta / np.sqrt(np.diag(self.cov_matrix))
+        p_values = 2 * (1 - t.cdf(np.abs(t_values), df=dof))
+        p_values = pd.Series(np.minimum(p_values, 2 * (1 - p_values)), name='P-values for the corresponding coefficients')
+        return p_values
+
+    def get_wald_test_result(self, R):
+        wald_value = float(np.dot(np.dot(R, self.beta), np.linalg.solve(np.dot(R, np.dot(self.cov_matrix, R.T)), R.T)))
+        dof = len(R)
+        p_value = 1 - f.cdf(wald_value, dfn=dof, dfd=len(self.left_hand_side) - len(self.beta))
+        return f"Wald: {wald_value:.3f}, p-value: {p_value:.3f}"
+
+    def get_model_goodness_values(self):
+        y_mean = np.mean(self.left_hand_side)
+        total_ss = np.sum((self.left_hand_side - y_mean) ** 2)
+        residual_ss = np.sum(self.residuals ** 2)
+        centered_r_squared = 1 - (residual_ss / total_ss)
+        n = len(self.left_hand_side)
+        k = len(self.beta)
+        adjusted_r_squared = 1 - ((1 - centered_r_squared) * (n - 1) / (n - k - 1))
+        return f"Centered R-squared: {centered_r_squared:.3f}, Adjusted R-squared: {adjusted_r_squared:.3f}"
