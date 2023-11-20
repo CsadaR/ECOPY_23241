@@ -114,7 +114,6 @@ class LinearRegressionGLS:
         p_values = pd.Series(p_values, name='P-values for the corresponding coefficients')
         return p_values
 
-
     def get_wald_test_result(self, R):
         r_matrix= np.array(R)
         r = r_matrix @ self.beta
