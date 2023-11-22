@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 from scipy.stats import t, f
+from typing import Union
+from scipy.optimize import minimize
 
 class LinearRegressionSM:
     def __init__(self, left_hand_side, right_hand_side):
@@ -130,3 +132,75 @@ class LinearRegressionGLS:
         crs = 1 - (rss / tss)
         ars = 1 - (rss / self.df * n1)/ tss
         return f'Centered R-squared: {crs:.3f}, Adjusted R-squared: {ars:.3f}'
+
+
+class LinearRegressionML:
+    def __init__(self, left_hand_side: pd.DataFrame, right_hand_side: pd.DataFrame):
+        self.left_hand_side = left_hand_side
+        self.right_hand_side = right_hand_side
+        self.beta_params = None
+
+    def fit(self):
+        def objective(params):
+            y = self.left_hand_side.values.flatten()
+            X = np.column_stack((np.ones_like(y), self.right_hand_side.values))
+            beta = params[:X.shape[1]]
+            residuals = y - np.dot(X, beta)
+            return np.sum(residuals ** 2)
+
+        initial_params = np.zeros(self.right_hand_side.shape[1] + 1)
+
+        result = minimize(objective, initial_params, method='L-BFGS-B')
+        self.beta_params = result.x
+
+        # Calculate var-cov matrix
+        n = self.left_hand_side.shape[0]
+        k = self.right_hand_side.shape[1]
+        residuals = self.left_hand_side.values.flatten() - np.dot(
+            np.column_stack((np.ones(n), self.right_hand_side.values)), self.beta_params
+        )
+        sigma_sq = np.sum(residuals ** 2) / (n - k)
+        var_cov_matrix = sigma_sq * np.linalg.inv(
+            np.dot(
+                np.column_stack((np.ones(n), self.right_hand_side.values)).T,
+                np.column_stack((np.ones(n), self.right_hand_side.values)),
+            )
+        )
+        self.var_cov_matrix = var_cov_matrix
+
+    def get_params(self):
+        return pd.Series(self.beta_params, index=['Beta coefficients'])
+
+    def get_pvalues(self):
+        n = self.left_hand_side.shape[0]
+        k = self.right_hand_side.shape[1]
+        residuals = self.left_hand_side.values.flatten() - np.dot(
+            np.column_stack((np.ones(n), self.right_hand_side.values)), self.beta_params
+        )
+        sigma_sq = np.sum(residuals**2) / (n - k)
+        var_cov_matrix = sigma_sq * np.linalg.inv(
+            np.dot(
+                np.column_stack((np.ones(n), self.right_hand_side.values)).T,
+                np.column_stack((np.ones(n), self.right_hand_side.values)),
+            )
+        )
+        se = np.sqrt(np.diag(var_cov_matrix))
+        t_stat = self.beta_params / se
+        p_values = pd.Series(2 * (1 - t.cdf(np.abs(t_stat), n - k)), index=['P-values for the corresponding coefficients'])
+        p_values = p_values.apply(lambda x: min(x, 1 - x) * 2)
+
+        return p_values
+
+    def get_model_goodness_values(self):
+        n = self.left_hand_side.shape[0]
+        k = self.right_hand_side.shape[1]
+        y = self.left_hand_side.values.flatten()
+        X = np.column_stack((np.ones_like(y), self.right_hand_side.values))
+        y_mean = np.mean(y)
+        y_hat = np.dot(X, self.beta_params)
+        tss = np.sum((y - y_mean)**2)
+        rss = np.sum((y - y_hat)**2)
+        crs = 1 - (rss / tss)
+        ars = 1 - (rss / (n - k - 1)) * (n - 1) / tss
+        return f"Centered R-squared: {crs:.3f}, Adjusted R-squared: {ars:.3f}"
+
