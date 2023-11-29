@@ -101,19 +101,20 @@ class LinearRegressionNP:
     def get_wild_se_and_normal_ci(self, number_of_bootstrap_samples, alpha, random_seed):
         np.random.seed(random_seed)
         bootstrap_samples = []
-        n = len(self.left_hand_side)
+        n, k = self.X.shape
         residuals = self.y - self.X @ self.beta
         for _ in range(number_of_bootstrap_samples):
-            v = np.random.standard_normal(size=n)
-            indices = np.random.choice (len(residuals),n, replace=True)
-            residuals_bootstrap= residuals[indices]
+            v = np.random.normal(0,1,size=n)
+            indices = np.random.choice (n,size=n, replace=True)
             X_bootstrap = self.X[indices, :]
+            residuals_bootstrap = (self.y[indices] - X_bootstrap @ self.beta) * np.random.normal(size=n)
             y_bootstrap = X_bootstrap @ self.beta + v*residuals_bootstrap
             beta_bootstrap = np.linalg.inv(X_bootstrap.T @ X_bootstrap) @ X_bootstrap.T @ y_bootstrap
             bootstrap_samples.append(beta_bootstrap[1])
-        se_bootstrap = np.std(bootstrap_samples)
-        z=norm.ppf(1-alpha/2)*se_bootstrap
-        ci_lower, ci_upper = self.beta[1] - z, self.beta[1] + z
+            se_bootstrap = np.std(bootstrap_samples)
+            z = norm.ppf(1 - alpha / 2)
+            ci_lower =self.beta[1] - z*se_bootstrap
+            ci_upper =self.beta[1] + z*se_bootstrap
         return f"Wild Bootstraped SE: {se_bootstrap:.3f}, CI: [{ci_lower:.3f}, {ci_upper:.3f}]"
 
 class LinearRegressionGLS:
