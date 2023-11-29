@@ -6,6 +6,7 @@ from scipy.stats import t, f
 from typing import Union
 from scipy.optimize import minimize
 from scipy.stats import norm
+from scipy.stats import percentileofscore
 
 class LinearRegressionSM:
     def __init__(self, left_hand_side, right_hand_side):
@@ -83,6 +84,37 @@ class LinearRegressionNP:
         ars = 1 - (1 - crs) * ((n - 1) / (n - K))
         return f"Centered R-squared: {crs:.3f}, Adjusted R-squared: {ars:.3f}"
 
+    def get_paired_se_and_percentile_ci(self, number_of_bootstrap_samples, alpha, random_seed):
+        np.random.seed(random_seed)
+        bootstrap_samples = []
+        n = len(self.left_hand_side)
+        for _ in range(number_of_bootstrap_samples):
+            indices = np.random.choice(n, n, replace=True)
+            X_bootstrap = self.X[indices,:]
+            y_bootstrap = self.y[indices]
+            beta_bootstrap = np.linalg.inv(X_bootstrap.T @ X_bootstrap) @ X_bootstrap.T @ y_bootstrap
+            bootstrap_samples.append(beta_bootstrap[1])
+        se_bootstrap = np.std(bootstrap_samples)
+        ci_lower, ci_upper = np.percentile(bootstrap_samples, [alpha / 2 * 100, (1 - alpha / 2) * 100])
+        return f"Paired Bootstraped SE: {se_bootstrap:.3f}, CI: [{ci_lower:.3f}, {ci_upper:.3f}]"
+
+    def get_wild_se_and_normal_ci(self, number_of_bootstrap_samples, alpha, random_seed):
+        np.random.seed(random_seed)
+        bootstrap_samples = []
+        n = len(self.left_hand_side)
+        residuals = self.y - self.X @ self.beta
+        for _ in range(number_of_bootstrap_samples):
+            v = np.random.standard_normal(size=n)
+            indices = np.random.choice (len(residuals),n, replace=True)
+            residuals_bootstrap= residuals[indices]
+            X_bootstrap = self.X[indices, :]
+            y_bootstrap = X_bootstrap @ self.beta + v*residuals_bootstrap
+            beta_bootstrap = np.linalg.inv(X_bootstrap.T @ X_bootstrap) @ X_bootstrap.T @ y_bootstrap
+            bootstrap_samples.append(beta_bootstrap[1])
+        se_bootstrap = np.std(bootstrap_samples)
+        z=norm.ppf(1-alpha/2)*se_bootstrap
+        ci_lower, ci_upper = self.beta[1] - z, self.beta[1] + z
+        return f"Wild Bootstraped SE: {se_bootstrap:.3f}, CI: [{ci_lower:.3f}, {ci_upper:.3f}]"
 
 class LinearRegressionGLS:
     def __init__(self, left_hand_side, right_hand_side):
@@ -143,10 +175,10 @@ class LinearRegressionML:
     def llh(self,params):
         self.X = np.column_stack((np.ones(len(self.right_hand_side)), self.right_hand_side))
         self.y = self.left_hand_side
-        beta0,beta1,beta2,beta3,sigma = params
+        beta0,beta1,beta2,beta3,self.sigma = params
         beta_params = np.array([beta0,beta1,beta2,beta3])
         beta_pred = self.X @ beta_params
-        llh = -np.sum(norm.logpdf(self.y,beta_pred,sigma))
+        llh = -np.sum(norm.logpdf(self.y,beta_pred,self.sigma))
         return llh
 
     def fit(self):
@@ -161,7 +193,7 @@ class LinearRegressionML:
     def get_pvalues(self):
         self.n, self.k = self.X.shape
         residuals = self.y - self.X @ self.beta_ML
-        sigma2 = np.sum(np.square(residuals)) / (self.n-self.k)
+        sigma2 = (np.square(self.sigma)*self.n) * (self.n-self.k)
         var_cov_matrix = np.linalg.inv(self.X.T @ self.X) * sigma2
         se = np.sqrt(np.diag(var_cov_matrix))
         t_stat = self.beta_ML / se
